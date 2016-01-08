@@ -23,6 +23,10 @@ func Open(path string, mode Mode) (Library, error) {
 	return open(path, mode)
 }
 
+func Find(name string) (path string, err error) {
+	return find(name)
+}
+
 func (err *Error) Error() string {
 	return err.Message
 }

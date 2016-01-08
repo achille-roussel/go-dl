@@ -128,3 +128,24 @@ func TestCloseSymbolError(t *testing.T) {
 		t.Error("symbol: error expected after closing the library")
 	}
 }
+
+func TestFindSuccess(t *testing.T) {
+	var path string
+	var err error
+
+	if path, err = Find("libc"); err != nil {
+		t.Error("find:", err)
+	}
+
+	if len(path) == 0 {
+		t.Error("find:")
+	} else {
+		t.Log("libc =>", path)
+	}
+}
+
+func TestFindFailure(t *testing.T) {
+	if _, err := Find("something-weird"); err == nil {
+		t.Error("find: unexpected library found")
+	}
+}
