@@ -2,9 +2,6 @@
 
 package dl
 
-// #cgo CFLAGS: -W -Wall -Wno-unused-parameter -O3
-// #cgo LDFLAGS: -ldl
-//
 // #include <dlfcn.h>
 // #include <stdlib.h>
 import "C"
@@ -21,25 +18,31 @@ type dylib struct {
 	handle unsafe.Pointer
 }
 
-var mutex sync.Mutex
-
 func open(path string, mode Mode) (lib *dylib, err error) {
-	var cpath *C.char
 	var handle unsafe.Pointer
+	var flags int
 
-	if len(path) != 0 {
-		if strings.Index(path, ext) < 0 {
-			path += ext
-		}
-		cpath = C.CString(path)
-		defer C.free(unsafe.Pointer(cpath))
+	if (mode & Lazy) != 0 {
+		flags |= C.RTLD_LAZY
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	if (mode & Now) != 0 {
+		flags |= C.RTLD_NOW
+	}
 
-	if handle = C.dlopen(cpath, makeMode(mode)); handle == nil {
-		err = lastError()
+	if (mode & Global) != 0 {
+		flags |= C.RTLD_GLOBAL
+	}
+
+	if (mode & Local) != 0 {
+		flags |= C.RTLD_LOCAL
+	}
+
+	if len(path) != 0 && !strings.HasSuffix(path, ext) {
+		path += ext
+	}
+
+	if handle, err = dlopen(path, flags); err != nil {
 		return
 	}
 
@@ -53,36 +56,27 @@ func open(path string, mode Mode) (lib *dylib, err error) {
 
 func (lib *dylib) Close() (err error) {
 	lib.mutex.Lock()
-	err = lib.close()
-	lib.mutex.Unlock()
-	return
+	defer lib.mutex.Unlock()
+	return lib.close()
 }
 
 func (lib *dylib) Symbol(name string) (addr uintptr, err error) {
 	var handle unsafe.Pointer
-	var ptr unsafe.Pointer
-	var sym *C.char
-
-	sym = C.CString(name)
-	defer C.free(unsafe.Pointer(sym))
+	var sym unsafe.Pointer
 
 	lib.mutex.RLock()
 	defer lib.mutex.RUnlock()
 
 	if handle = lib.handle; handle == nil {
-		err = syscall.EINVAL
+		err= syscall.EINVAL
 		return
 	}
 
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	if ptr = C.dlsym(handle, sym); ptr == nil {
-		err = lastError()
+	if sym, err = dlsym(handle, name); err != nil {
 		return
 	}
 
-	addr = uintptr(ptr)
+	addr = uintptr(sym)
 	return
 }
 
@@ -90,47 +84,58 @@ func (lib *dylib) close() (err error) {
 	var handle unsafe.Pointer
 
 	if handle, lib.handle = lib.handle, nil; handle != nil {
-		mutex.Lock()
-		defer mutex.Unlock()
-
-		if C.dlclose(handle) != 0 {
-			err = lastError()
-		}
-	}
-
-	return
-}
-
-func makeMode(mode Mode) (c C.int) {
-	if (mode & Lazy) != 0 {
-		c |= C.RTLD_LAZY
-	}
-
-	if (mode & Now) != 0 {
-		c |= C.RTLD_NOW
-	}
-
-	if (mode & Global) != 0 {
-		c |= C.RTLD_GLOBAL
-	}
-
-	if (mode & Local) != 0 {
-		c |= C.RTLD_LOCAL
-	}
-
-	return
-}
-
-func lastError() error {
-	var s string
-
-	if err := C.dlerror(); err == nil {
-		s = "unknown"
+		err = dlclose(handle)
 	} else {
-		s = C.GoString(err)
+		err = syscall.EINVAL
 	}
 
+	return
+}
+
+var dlmtx sync.Mutex
+
+func dlopen(path string, flags int) (lib unsafe.Pointer, err error) {
+	var f = C.int(flags)
+	var s = C.CString(path)
+	defer C.free(unsafe.Pointer(s))
+
+	dlmtx.Lock()
+	defer dlmtx.Unlock()
+
+	if lib = C.dlopen(s, f); lib == nil {
+		err = dlerror()
+	}
+
+	return
+}
+
+func dlclose(lib unsafe.Pointer) (err error) {
+	dlmtx.Lock()
+	defer dlmtx.Unlock()
+
+	if C.dlclose(lib) != 0 {
+		err = dlerror()
+	}
+
+	return
+}
+
+func dlsym(lib unsafe.Pointer, name string) (addr unsafe.Pointer, err error) {
+	var s = C.CString(name)
+	defer C.free(unsafe.Pointer(s))
+
+	dlmtx.Lock()
+	defer dlmtx.Unlock()
+
+	if addr = C.dlsym(lib, s); addr == nil {
+		err = dlerror()
+	}
+
+	return
+}
+
+func dlerror() error {
 	return &Error{
-		Message: s,
+		Message: C.GoString(C.dlerror()),
 	}
 }
