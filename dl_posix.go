@@ -7,7 +7,6 @@ package dl
 import "C"
 import (
 	"runtime"
-	"strings"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -21,6 +20,10 @@ type dylib struct {
 func open(path string, mode Mode) (lib *dylib, err error) {
 	var handle unsafe.Pointer
 	var flags int
+
+	if (mode & Lazy) == 0 && (mode & Now) == 0 {
+		mode |= Now
+	}
 
 	if (mode & Lazy) != 0 {
 		flags |= C.RTLD_LAZY
@@ -36,10 +39,6 @@ func open(path string, mode Mode) (lib *dylib, err error) {
 
 	if (mode & Local) != 0 {
 		flags |= C.RTLD_LOCAL
-	}
-
-	if len(path) != 0 && !strings.HasSuffix(path, ext) {
-		path += ext
 	}
 
 	if handle, err = dlopen(path, flags); err != nil {
@@ -96,8 +95,12 @@ var dlmtx sync.Mutex
 
 func dlopen(path string, flags int) (lib unsafe.Pointer, err error) {
 	var f = C.int(flags)
-	var s = C.CString(path)
-	defer C.free(unsafe.Pointer(s))
+	var s *C.char
+
+	if len(path) != 0 {
+		s = C.CString(path)
+		defer C.free(unsafe.Pointer(s))
+	}
 
 	dlmtx.Lock()
 	defer dlmtx.Unlock()

@@ -2,11 +2,26 @@ package dl
 
 import "testing"
 
+func TestOpenDefault(t *testing.T) {
+	var lib Library
+	var err error
+
+	if lib, err = Open("", 0); err != nil {
+		t.Error("open:", err)
+		return
+	}
+
+	if err = lib.Close(); err != nil {
+		t.Error("close:", err)
+		return
+	}
+}
+
 func TestOpenLazyGlobal(t *testing.T) {
 	var lib Library
 	var err error
 
-	if lib, err = Open("libc", Lazy|Global); err != nil {
+	if lib, err = Open(libc, Lazy|Global); err != nil {
 		t.Error("open:", err)
 		return
 	}
@@ -21,7 +36,7 @@ func TestOpenNowLocal(t *testing.T) {
 	var lib Library
 	var err error
 
-	if lib, err = Open("libc", Now|Local); err != nil {
+	if lib, err = Open(libc, Now|Local); err != nil {
 		t.Error("open:", err)
 		return
 	}
@@ -37,7 +52,7 @@ func TestSymbol(t *testing.T) {
 	var err error
 	var ptr uintptr
 
-	if lib, err = Open("libc", Lazy|Local); err != nil {
+	if lib, err = Open(libc, Lazy|Local); err != nil {
 		t.Error("open:", err)
 		return
 	}
@@ -67,7 +82,7 @@ func TestSymbolError(t *testing.T) {
 	var lib Library
 	var err error
 
-	if lib, err = Open("libc", Lazy|Local); err != nil {
+	if lib, err = Open(libc, Lazy|Local); err != nil {
 		t.Error("open:", err)
 		return
 	}
