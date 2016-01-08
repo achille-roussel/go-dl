@@ -1,6 +1,9 @@
 package dl
 
-import "testing"
+import (
+	"syscall"
+	"testing"
+)
 
 func TestOpenDefault(t *testing.T) {
 	var lib Library
@@ -78,7 +81,39 @@ func TestOpenError(t *testing.T) {
 	}
 }
 
+func TestCloseError(t *testing.T) {
+	var lib Library
+	var err error
+
+	if lib, err = Open(libc, Lazy|Local); err != nil {
+		t.Error("open:", err)
+		return
+	}
+
+	lib.Close()
+
+	if err = lib.Close(); err != syscall.EINVAL {
+		t.Error("close:", err)
+	}
+}
+
 func TestSymbolError(t *testing.T) {
+	var lib Library
+	var err error
+
+	if lib, err = Open(libc, Lazy|Local); err != nil {
+		t.Error("open:", err)
+		return
+	}
+
+	defer lib.Close()
+
+	if _, err = lib.Symbol("something-weird"); err == nil {
+		t.Error("symbol:", err)
+	}
+}
+
+func TestCloseSymbolError(t *testing.T) {
 	var lib Library
 	var err error
 
