@@ -50,8 +50,8 @@ func main() {
 Finding C Libraries
 -------------------
 
-*go-dl* comes with a function that attempts to emulate the platform's logic for
-dynamic library discovery in a portable way.
+*go-dl* also comes with a function that attempts to emulate the platform's logic
+for dynamic library discovery in a portable way, here's an example:
 
 ```go
 package main
