@@ -1,13 +1,13 @@
 go-dl [![Build Status](https://travis-ci.org/achille-roussel/go-dl.svg)](https://travis-ci.org/achille-roussel/go-dl) [![Coverage Status](https://coveralls.io/repos/achille-roussel/go-dl/badge.svg?branch=master&service=github)](https://coveralls.io/github/achille-roussel/go-dl?branch=master)
 =====
 
-**go-dl** is a package exposing dynamic library loading features to the Go language.
+*go-dl* is a package exposing dynamic library loading features to the Go language.
 
 Dynamically Loading C Libraries
 -------------------------------
 
-The go-dl package exposes the `Open` function that taking a library name or path
-and some options will load the code in memory and return an object allowing
+The *go-dl* package exposes the `Open` function that taking a library name or
+path and some options will load the code in memory and return an object allowing
 interaction with the library.
 
 Here's an example:
@@ -50,7 +50,7 @@ func main() {
 Finding C Libraries
 -------------------
 
-go-ffi comes with a function that attempts to emulate the platform's logic for
+*go-dl* comes with a function that attempts to emulate the platform's logic for
 dynamic library discovery in a portable way.
 
 ```go
